@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState, useSyncExternalStore } from "react";
+import { FormEvent, useEffect, useState, useSyncExternalStore } from "react";
 import {
-  getClientToken,
   getHasTokenServerSnapshot,
   getHasTokenSnapshot,
   setClientToken,
@@ -14,6 +13,7 @@ import { SocialLogo } from "@/components/social-logo";
 
 export default function HomePage() {
   const router = useRouter();
+  const [hydrated, setHydrated] = useState(false);
   const hasToken = useSyncExternalStore(
     subscribeAuthStore,
     getHasTokenSnapshot,
@@ -31,6 +31,10 @@ export default function HomePage() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   async function submitLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -78,7 +82,7 @@ export default function HomePage() {
     router.replace("/feed");
   }
 
-  const showFeedActions = hasToken || Boolean(getClientToken());
+  const showFeedActions = hydrated && hasToken;
 
   return (
     <main className="mx-auto min-h-screen max-w-[1360px] px-4 py-6 sm:px-6 sm:py-8">

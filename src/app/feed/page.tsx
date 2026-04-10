@@ -25,6 +25,14 @@ type Post = {
   created_at: string;
 };
 
+type Comment = {
+  id: string;
+  author_id: string;
+  author_username?: string;
+  content: string;
+  created_at: string;
+};
+
 type SuggestedUser = {
   id: string;
   username: string;
@@ -50,6 +58,11 @@ export default function FeedPage() {
   const [error, setError] = useState("");
   const [loadingFeed, setLoadingFeed] = useState(true);
   const [posting, setPosting] = useState(false);
+  const [expandedCommentsPostId, setExpandedCommentsPostId] = useState<string | null>(null);
+  const [commentsByPostId, setCommentsByPostId] = useState<Record<string, Comment[]>>({});
+  const [commentDraftByPostId, setCommentDraftByPostId] = useState<Record<string, string>>({});
+  const [loadingCommentsPostId, setLoadingCommentsPostId] = useState<string | null>(null);
+  const [sendingCommentPostId, setSendingCommentPostId] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const postPrompts = useMemo(
     () => ["Morning recap", "What I’m building", "Weekend highlights", "A moment worth saving"],
@@ -224,6 +237,82 @@ export default function FeedPage() {
     void loadFeed();
   }
 
+  async function loadComments(postId: string) {
+    setLoadingCommentsPostId(postId);
+
+    const response = await fetch(`/api/posts/${postId}/comments?page=1&limit=20`);
+    const data = await response.json();
+
+    if (!response.ok) {
+      setError(data.error ?? "Unable to load comments.");
+      setLoadingCommentsPostId(null);
+      return;
+    }
+
+    setCommentsByPostId((prev) => ({
+      ...prev,
+      [postId]: data.items ?? []
+    }));
+    setLoadingCommentsPostId(null);
+  }
+
+  async function addComment(postId: string) {
+    const token = getClientToken();
+
+    if (!token) {
+      setError("Login first.");
+      return;
+    }
+
+    const contentValue = (commentDraftByPostId[postId] ?? "").trim();
+
+    if (!contentValue) {
+      return;
+    }
+
+    setSendingCommentPostId(postId);
+
+    const response = await fetch(`/api/posts/${postId}/comments`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ content: contentValue })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      setError(data.error ?? "Unable to add comment.");
+      setSendingCommentPostId(null);
+      return;
+    }
+
+    setCommentDraftByPostId((prev) => ({ ...prev, [postId]: "" }));
+    setCommentsByPostId((prev) => ({
+      ...prev,
+      [postId]: [data.comment, ...(prev[postId] ?? [])]
+    }));
+    setPosts((prev) => prev.map((post) => (post.id === postId ? { ...post, comment_count: post.comment_count + 1 } : post)));
+    setSendingCommentPostId(null);
+  }
+
+  function toggleComments(postId: string) {
+    const isClosing = expandedCommentsPostId === postId;
+
+    if (isClosing) {
+      setExpandedCommentsPostId(null);
+      return;
+    }
+
+    setExpandedCommentsPostId(postId);
+
+    if (!commentsByPostId[postId]) {
+      void loadComments(postId);
+    }
+  }
+
   const stories = Array.from(new Map(posts.map((post) => [post.author_id, post])).values()).slice(0, 8);
   const mediaPosts = posts.filter((post) => post.media_url);
   const lightboxPost = lightboxIndex !== null ? mediaPosts[lightboxIndex] ?? null : null;
@@ -326,13 +415,57 @@ export default function FeedPage() {
                   >
                     <Heart size={14} /> Like
                   </button>
-                  <Link
-                    href={`/posts/${post.id}` as Route}
+                  <button
+                    type="button"
+                    onClick={() => toggleComments(post.id)}
                     className="inline-flex items-center gap-1 rounded-full border border-white/20 px-3 py-1 transition hover:-translate-y-0.5 hover:bg-white/10"
                   >
-                    <MessageCircle size={14} /> View post
-                  </Link>
+                    <MessageCircle size={14} /> {expandedCommentsPostId === post.id ? "Hide comments" : "Comments"}
+                  </button>
                 </div>
+
+                {expandedCommentsPostId === post.id ? (
+                  <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3">
+                    <div className="flex gap-2">
+                      <input
+                        value={commentDraftByPostId[post.id] ?? ""}
+                        onChange={(event) => setCommentDraftByPostId((prev) => ({ ...prev, [post.id]: event.target.value }))}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            void addComment(post.id);
+                          }
+                        }}
+                        maxLength={280}
+                        className="w-full rounded-xl border border-white/15 bg-slate-900/70 px-3 py-2 text-sm text-white"
+                        placeholder="Add comment"
+                      />
+                      <button
+                        type="button"
+                        disabled={sendingCommentPostId === post.id || !(commentDraftByPostId[post.id] ?? "").trim()}
+                        onClick={() => {
+                          void addComment(post.id);
+                        }}
+                        className="rounded-xl bg-accent px-3 py-2 text-sm font-medium text-accent-foreground disabled:opacity-60"
+                      >
+                        Add
+                      </button>
+                    </div>
+
+                    <div className="mt-3 space-y-2">
+                      {loadingCommentsPostId === post.id ? <p className="text-xs text-slate-400">Loading comments...</p> : null}
+                      {(commentsByPostId[post.id] ?? []).map((comment) => (
+                        <article key={comment.id} className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+                          <p className="text-xs text-slate-300">@{comment.author_username ?? "unknown"}</p>
+                          <p className="mt-1 text-sm text-white">{comment.content}</p>
+                        </article>
+                      ))}
+                      {loadingCommentsPostId !== post.id && (commentsByPostId[post.id] ?? []).length === 0 ? (
+                        <p className="text-xs text-slate-400">No comments yet. Start the conversation.</p>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
               </article>
             ))}
           </section>
