@@ -38,12 +38,6 @@ type OwnPost = {
   created_at: string;
 };
 
-type FollowerPreview = {
-  id: string;
-  username: string;
-  avatar_url: string | null;
-};
-
 export default function MePage() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -58,22 +52,20 @@ export default function MePage() {
   const [loading, setLoading] = useState(true);
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [followerPreviews, setFollowerPreviews] = useState<FollowerPreview[]>([]);
 
-  const loadFollowerPreviews = useCallback(async (profileId: string) => {
-    const response = await fetch(`/api/users/${profileId}/followers?page=1&limit=4`);
-    const data = await response.json();
-
-    if (response.ok) {
-      setFollowerPreviews((data.items ?? []).slice(0, 4) as FollowerPreview[]);
-    }
-  }, []);
+  function hydrateForm(user: Profile) {
+    setEmail(user.email ?? "");
+    setPhoneNumber((user.phone_number as string | null) ?? "");
+    setBio((user.bio as string | null) ?? "");
+    setLocation((user.location as string | null) ?? "");
+    setWebsite((user.website as string | null) ?? "");
+  }
 
   const loadProfile = useCallback(async () => {
     const token = getClientToken();
 
     if (!token) {
-      router.replace("/login");
+      router.replace("/");
       return;
     }
 
@@ -93,20 +85,15 @@ export default function MePage() {
     }
 
     setProfile(data.user);
-    setEmail(data.user.email ?? "");
-    setPhoneNumber((data.user.phone_number as string | null) ?? "");
-    setBio((data.user.bio as string | null) ?? "");
-    setLocation((data.user.location as string | null) ?? "");
-    setWebsite((data.user.website as string | null) ?? "");
-    void loadFollowerPreviews(data.user.id);
+    hydrateForm(data.user as Profile);
     setLoading(false);
-  }, [loadFollowerPreviews, router]);
+  }, [router]);
 
   const loadOwnPosts = useCallback(async () => {
     const token = getClientToken();
 
     if (!token) {
-      router.replace("/login");
+      router.replace("/");
       return;
     }
 
@@ -189,10 +176,18 @@ export default function MePage() {
     }
 
     setProfile(data.user);
-    setEmail(data.user.email ?? "");
-    setPhoneNumber((data.user.phone_number as string | null) ?? "");
+    hydrateForm(data.user as Profile);
     setNotice("Profile updated.");
     void loadOwnPosts();
+  }
+
+  function cancelEditing() {
+    if (profile) {
+      hydrateForm(profile);
+    }
+    setIsEditing(false);
+    setNotice("");
+    setError("");
   }
 
   async function uploadAvatar(event: FormEvent<HTMLFormElement>) {
@@ -231,7 +226,7 @@ export default function MePage() {
     const token = getClientToken();
 
     if (!token) {
-      router.replace("/login");
+      router.replace("/");
       return;
     }
 
@@ -255,10 +250,10 @@ export default function MePage() {
   return (
     <div className="min-h-screen bg-[#040b14] text-white">
       <NotificationsBell />
-      <div className="mx-auto flex max-w-[1400px]">
+      <div className="flex w-full">
         <AppSidebar active="profile" />
 
-        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-10">
+        <main className="min-w-0 w-full flex-1 px-3 py-4 sm:px-4 sm:py-5 lg:px-4 lg:py-5">
           <div className="mb-4 flex items-center justify-between lg:hidden">
             <SocialLogo href={"/feed" as Route} />
             <Link href={"/feed" as Route} className="rounded-full border border-white/20 px-3 py-1 text-sm text-slate-200">
@@ -268,10 +263,9 @@ export default function MePage() {
 
           {error ? <p className="mb-3 text-sm text-rose-300">{error}</p> : null}
           {notice ? <p className="mb-3 text-sm text-emerald-300">{notice}</p> : null}
-          {loading ? <p className="mb-3 text-sm text-slate-300">Loading profile...</p> : null}
 
           {profile ? (
-            <section className="mx-auto max-w-4xl">
+            <section className="w-full">
               <div className="flex flex-col gap-6 border-b border-white/10 pb-8 sm:flex-row">
                 <div className="sm:w-52 sm:shrink-0 sm:pl-8">
                   {profile.avatar_url ? (
@@ -307,24 +301,6 @@ export default function MePage() {
                     <p><span className="font-semibold">{profile.following_count}</span> following</p>
                   </div>
 
-                  <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-300">
-                    <span className="uppercase tracking-[0.25em]">Followed by</span>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {followerPreviews.length > 0 ? followerPreviews.map((follower) => (
-                        <span key={follower.id} className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-1">
-                          {follower.avatar_url ? (
-                            <Image src={follower.avatar_url} alt={follower.username} width={18} height={18} className="h-[18px] w-[18px] rounded-full object-cover" />
-                          ) : (
-                            <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-white/10 text-[10px]">{follower.username.slice(0, 1).toUpperCase()}</span>
-                          )}
-                          <span>{follower.username}</span>
-                        </span>
-                      )) : (
-                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1">sample followers</span>
-                      )}
-                    </div>
-                  </div>
-
                   <div className="mt-4 space-y-1 text-sm text-slate-200">
                     <p className="font-semibold text-white">{profile.first_name} {profile.last_name}</p>
                     <p>{profile.bio || "No bio yet."}</p>
@@ -336,20 +312,52 @@ export default function MePage() {
 
               {isEditing ? (
                 <section className="mt-6 grid gap-5 lg:grid-cols-2">
-                  <form onSubmit={saveProfile} className="space-y-3 rounded-2xl border border-white/10 bg-black/20 p-5">
-                    <h2 className="text-lg font-semibold">Edit profile</h2>
-                    <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" className="w-full rounded-xl border border-white/15 bg-slate-900/70 px-3 py-2 text-white" placeholder="Email" />
-                    <input value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} className="w-full rounded-xl border border-white/15 bg-slate-900/70 px-3 py-2 text-white" placeholder="Phone number" />
-                    <textarea value={bio} onChange={(event) => setBio(event.target.value)} maxLength={160} className="h-24 w-full rounded-xl border border-white/15 bg-slate-900/70 px-3 py-2 text-white" placeholder="Bio" />
-                    <input value={location} onChange={(event) => setLocation(event.target.value)} className="w-full rounded-xl border border-white/15 bg-slate-900/70 px-3 py-2 text-white" placeholder="Location" />
-                    <input value={website} onChange={(event) => setWebsite(event.target.value)} className="w-full rounded-xl border border-white/15 bg-slate-900/70 px-3 py-2 text-white" placeholder="Website" />
-                    <button className="w-full rounded-xl bg-[#26457f] px-4 py-2.5 font-medium">Save changes</button>
+                  <form onSubmit={saveProfile} className="space-y-4 rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.05] to-black/20 p-5">
+                    <div>
+                      <h2 className="text-lg font-semibold">Edit profile</h2>
+                      <p className="mt-1 text-xs text-slate-300">Keep your public and contact details up to date.</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs uppercase tracking-[0.2em] text-slate-400">Email</label>
+                      <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" className="w-full rounded-xl border border-white/15 bg-slate-900/70 px-3 py-2 text-white" placeholder="Email" />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs uppercase tracking-[0.2em] text-slate-400">Phone number</label>
+                      <input value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} className="w-full rounded-xl border border-white/15 bg-slate-900/70 px-3 py-2 text-white" placeholder="Phone number" />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs uppercase tracking-[0.2em] text-slate-400">Bio</label>
+                        <span className="text-xs text-slate-400">{bio.length}/160</span>
+                      </div>
+                      <textarea value={bio} onChange={(event) => setBio(event.target.value)} maxLength={160} className="h-24 w-full rounded-xl border border-white/15 bg-slate-900/70 px-3 py-2 text-white" placeholder="Tell people about you" />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs uppercase tracking-[0.2em] text-slate-400">Location</label>
+                      <input value={location} onChange={(event) => setLocation(event.target.value)} className="w-full rounded-xl border border-white/15 bg-slate-900/70 px-3 py-2 text-white" placeholder="Location" />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs uppercase tracking-[0.2em] text-slate-400">Website</label>
+                      <input value={website} onChange={(event) => setWebsite(event.target.value)} className="w-full rounded-xl border border-white/15 bg-slate-900/70 px-3 py-2 text-white" placeholder="https://example.com" />
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <button className="w-full rounded-xl bg-[#26457f] px-4 py-2.5 font-medium">Save changes</button>
+                      <button type="button" onClick={cancelEditing} className="w-full rounded-xl border border-white/25 px-4 py-2.5 font-medium text-slate-200">Cancel</button>
+                    </div>
                   </form>
 
                   <form onSubmit={uploadAvatar} className="rounded-2xl border border-white/10 bg-black/20 p-5">
                     <h2 className="text-lg font-semibold">Upload avatar</h2>
-                    <p className="mt-2 text-xs text-slate-300">JPEG or PNG, max 2 MB.</p>
-                    <input name="file" type="file" accept="image/jpeg,image/png" className="mt-4 w-full text-sm text-slate-200" />
+                    <p className="mt-2 text-xs text-slate-300">JPEG or PNG, max 2 MB. Use a clear face image for better profile recognition.</p>
+                    <div className="mt-4 rounded-xl border border-dashed border-white/20 bg-white/[0.02] p-3">
+                      <input name="file" type="file" accept="image/jpeg,image/png" className="w-full text-sm text-slate-200" />
+                    </div>
                     <button className="mt-4 w-full rounded-xl border border-white/30 px-4 py-2.5 text-sm font-medium">Upload avatar</button>
                   </form>
                 </section>

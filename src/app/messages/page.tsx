@@ -240,10 +240,10 @@ export default function MessagesPage() {
   return (
     <div className="min-h-screen bg-[#040b14] text-white">
       <NotificationsBell />
-      <div className="mx-auto flex max-w-[1400px]">
+      <div className="flex w-full">
         <AppSidebar active="messages" />
 
-        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-10">
+        <main className="min-w-0 w-full flex-1 px-3 py-4 sm:px-4 sm:py-5 lg:px-4 lg:py-5">
           <div className="mb-4 flex items-center justify-between lg:hidden">
             <SocialLogo href={"/feed" as Route} />
             <Link href={"/search" as Route} className="rounded-full border border-white/20 px-3 py-1 text-sm text-slate-200">
@@ -254,7 +254,7 @@ export default function MessagesPage() {
           {error ? <p className="mb-3 text-sm text-rose-300">{error}</p> : null}
           {loading ? <p className="mb-3 text-sm text-slate-300">Loading messages...</p> : null}
 
-          <section className="grid min-h-[70vh] overflow-hidden rounded-2xl border border-white/10 bg-black/20 md:grid-cols-[280px_1fr]">
+          <section className="grid h-[calc(100vh-2.5rem)] w-full min-h-0 overflow-hidden rounded-2xl border border-white/10 bg-black/20 md:grid-cols-[280px_minmax(0,1fr)] lg:grid-cols-[320px_minmax(0,1fr)]">
             <aside className="border-b border-white/10 p-4 md:border-b-0 md:border-r">
               <h1 className="text-lg font-semibold">Messages</h1>
               <p className="mt-1 text-xs text-slate-400">You can chat with connected followers/following users.</p>

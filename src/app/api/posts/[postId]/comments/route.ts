@@ -10,6 +10,40 @@ type RouteParams = {
   params: Promise<{ postId: string }>;
 };
 
+type RawComment = {
+  id: string;
+  post_id: string;
+  author_id: string;
+  content: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+async function attachCommentAuthors(comments: RawComment[]) {
+  if (comments.length === 0) {
+    return [];
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const authorIds = [...new Set(comments.map((comment) => comment.author_id))];
+  const { data: users } = await supabase
+    .from("users")
+    .select("id,username")
+    .in("id", authorIds);
+
+  const usernames = new Map<string, string>();
+
+  (users ?? []).forEach((user) => {
+    usernames.set(user.id, user.username);
+  });
+
+  return comments.map((comment) => ({
+    ...comment,
+    author_username: usernames.get(comment.author_id) ?? "unknown"
+  }));
+}
+
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const parsedParams = postIdParamsSchema.safeParse(await params);
 
@@ -48,8 +82,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return jsonError(error.message, 500);
   }
 
+  const items = await attachCommentAuthors((data ?? []) as RawComment[]);
+
   return jsonSuccess({
-    items: data ?? [],
+    items,
     page,
     limit,
     total: count ?? 0
@@ -105,5 +141,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return jsonError(error?.message ?? "Unable to add comment.", 500);
   }
 
-  return jsonSuccess({ comment: data }, { status: 201 });
+  return jsonSuccess(
+    {
+      comment: {
+        ...data,
+        author_username: auth.user.username || "unknown"
+      }
+    },
+    { status: 201 }
+  );
 }

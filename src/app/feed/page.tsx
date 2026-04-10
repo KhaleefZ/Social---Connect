@@ -60,7 +60,7 @@ export default function FeedPage() {
     const token = getClientToken();
 
     if (!token) {
-      router.replace("/login");
+      router.replace("/");
       return;
     }
     setLoadingFeed(true);
@@ -231,10 +231,10 @@ export default function FeedPage() {
   return (
     <div className="min-h-screen bg-[#040b14] text-white">
       <NotificationsBell />
-      <div className="mx-auto flex max-w-[1400px]">
+      <div className="flex w-full">
         <AppSidebar active="feed" />
 
-        <main className="min-w-0 flex-1 px-4 py-5 sm:px-6 lg:px-10">
+        <main className="min-w-0 w-full flex-1 px-3 py-4 sm:px-4 sm:py-5 lg:px-4 lg:py-5">
           <div className="mb-4 flex items-center justify-between lg:hidden">
             <SocialLogo href={"/feed" as Route} />
             <Link href={"/me" as Route} className="rounded-full border border-white/20 px-3 py-1 text-sm text-slate-200">

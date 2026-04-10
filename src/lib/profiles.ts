@@ -31,7 +31,7 @@ export async function loadPublicProfile(userId: string): Promise<PublicProfile |
   }
 
   const [posts, followers, following] = await Promise.all([
-    supabase.from("posts").select("id", { count: "exact", head: true }).eq("author_id", user.id),
+    supabase.from("posts").select("id", { count: "exact", head: true }).eq("author_id", user.id).eq("is_active", true),
     supabase.from("follows").select("id", { count: "exact", head: true }).eq("following_id", user.id),
     supabase.from("follows").select("id", { count: "exact", head: true }).eq("follower_id", user.id)
   ]);

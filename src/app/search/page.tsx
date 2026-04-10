@@ -126,10 +126,10 @@ export default function SearchPage() {
   return (
     <div className="min-h-screen bg-[#040b14] text-white">
       <NotificationsBell />
-      <div className="mx-auto flex max-w-[1400px]">
+      <div className="flex w-full">
         <AppSidebar active="search" />
 
-        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-10">
+        <main className="min-w-0 w-full flex-1 px-3 py-4 sm:px-4 sm:py-5 lg:px-4 lg:py-5">
           <div className="mb-4 flex items-center justify-between lg:hidden">
             <SocialLogo href={"/feed" as Route} />
             <Link href={"/messages" as Route} className="rounded-full border border-white/20 px-3 py-1 text-sm text-slate-200">
@@ -137,7 +137,7 @@ export default function SearchPage() {
             </Link>
           </div>
 
-          <section className="mx-auto max-w-3xl rounded-2xl border border-white/10 bg-black/25 p-5 sm:p-6">
+          <section className="w-full rounded-2xl border border-white/10 bg-black/25 p-5 sm:p-6">
             <h1 className="text-2xl font-semibold">Search users</h1>
             <p className="mt-2 text-sm text-slate-300">Find profiles, open profile pages, and follow people.</p>
             <input

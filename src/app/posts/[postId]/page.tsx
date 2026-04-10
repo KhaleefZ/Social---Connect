@@ -23,6 +23,7 @@ type Post = {
 type Comment = {
   id: string;
   author_id: string;
+  author_username?: string;
   content: string;
   created_at: string;
 };
@@ -79,7 +80,7 @@ export default function PostDetailsPage() {
     const token = getClientToken();
 
     if (!token) {
-      router.replace("/login");
+      router.replace("/");
       return;
     }
 
@@ -95,7 +96,7 @@ export default function PostDetailsPage() {
     const token = getClientToken();
 
     if (!token) {
-      router.replace("/login");
+      router.replace("/");
       return;
     }
 
@@ -112,7 +113,7 @@ export default function PostDetailsPage() {
     const token = getClientToken();
 
     if (!token) {
-      router.replace("/login");
+      router.replace("/");
       return;
     }
     const response = await fetch(`/api/posts/${postId}/comments`, {
@@ -207,7 +208,7 @@ export default function PostDetailsPage() {
           <div className="mt-4 space-y-3">
             {comments.map((comment) => (
               <article key={comment.id} className="rounded-xl border border-white/10 bg-black/20 p-3">
-                <p className="text-xs text-slate-300">{comment.author_id}</p>
+                <p className="text-xs text-slate-300">@{comment.author_username ?? "unknown"}</p>
                 <p className="mt-1 text-sm text-white">{comment.content}</p>
               </article>
             ))}

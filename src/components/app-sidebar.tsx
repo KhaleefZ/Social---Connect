@@ -27,7 +27,7 @@ export function AppSidebar({ active }: AppSidebarProps) {
     }
 
     clearClientToken();
-    router.replace("/login");
+    router.replace("/");
   }
 
   return (

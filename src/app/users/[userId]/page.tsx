@@ -61,7 +61,7 @@ export default function PublicProfilePage() {
     const token = getClientToken();
 
     if (!token) {
-      router.replace("/login");
+      router.replace("/");
       return;
     }
 
@@ -86,7 +86,7 @@ export default function PublicProfilePage() {
     const token = getClientToken();
 
     if (!token) {
-      router.replace("/login");
+      router.replace("/");
       return;
     }
 
@@ -113,7 +113,6 @@ export default function PublicProfilePage() {
       <main className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6 sm:py-10">
         <h1 className="text-3xl font-semibold text-white">View profile</h1>
         {error ? <p className="text-sm text-rose-300">{error}</p> : null}
-        {loading ? <p className="text-sm text-slate-300">Loading profile...</p> : null}
 
         {profile ? (
           <section className="rounded-2xl border border-white/10 bg-white/5 p-5">

@@ -8,7 +8,7 @@ import { env } from "@/lib/env";
 
 async function loadProfileStats(supabase: ReturnType<typeof createSupabaseAdminClient>, userId: string) {
   const [posts, followers, following] = await Promise.all([
-    supabase.from("posts").select("id", { count: "exact", head: true }).eq("author_id", userId),
+    supabase.from("posts").select("id", { count: "exact", head: true }).eq("author_id", userId).eq("is_active", true),
     supabase.from("follows").select("id", { count: "exact", head: true }).eq("following_id", userId),
     supabase.from("follows").select("id", { count: "exact", head: true }).eq("follower_id", userId)
   ]);
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
   const stats = await loadProfileStats(supabase, user.id);
   const token = await signAuthToken({ sub: user.id, email: user.email, username: user.username });
-  const loginUrl = `${env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/login`;
+  const loginUrl = `${env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/`;
   const emailResult = await sendRegistrationEmail({
     to: user.email,
     username: user.username,

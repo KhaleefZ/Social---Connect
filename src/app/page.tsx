@@ -222,11 +222,6 @@ export default function HomePage() {
               </>
             )}
 
-            {!showFeedActions ? (
-              <div className="mt-8 space-y-3">
-                <p className="text-center text-xs text-slate-400">You can also use dedicated routes: /login and /register</p>
-              </div>
-            ) : null}
           </div>
         </div>
       </section>

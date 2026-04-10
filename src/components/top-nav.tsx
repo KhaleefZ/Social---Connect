@@ -55,7 +55,7 @@ export function TopNav() {
                   }
 
                   clearClientToken();
-                  router.replace("/login");
+                  router.replace("/");
                 }}
                 className="rounded-full bg-white px-3 py-1.5 font-medium text-slate-900 transition hover:-translate-y-0.5"
               >
@@ -65,13 +65,13 @@ export function TopNav() {
           ) : (
             <>
               <Link
-                href={"/login" as Route}
+                href={"/" as Route}
                 className="rounded-full border border-white/15 px-3 py-1.5 transition hover:-translate-y-0.5 hover:bg-white/10"
               >
                 Login
               </Link>
               <Link
-                href={"/register" as Route}
+                href={"/" as Route}
                 className="rounded-full border border-white/15 px-3 py-1.5 transition hover:-translate-y-0.5 hover:bg-white/10"
               >
                 Register

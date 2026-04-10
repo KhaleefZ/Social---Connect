@@ -6,7 +6,7 @@ import { loginSchema } from "@/lib/validators/auth";
 
 async function loadProfileStats(supabase: ReturnType<typeof createSupabaseAdminClient>, userId: string) {
   const [posts, followers, following] = await Promise.all([
-    supabase.from("posts").select("id", { count: "exact", head: true }).eq("author_id", userId),
+    supabase.from("posts").select("id", { count: "exact", head: true }).eq("author_id", userId).eq("is_active", true),
     supabase.from("follows").select("id", { count: "exact", head: true }).eq("following_id", userId),
     supabase.from("follows").select("id", { count: "exact", head: true }).eq("follower_id", userId)
   ]);
