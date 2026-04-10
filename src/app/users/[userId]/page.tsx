@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -174,6 +175,9 @@ export default function PublicProfilePage() {
               >
                 Unfollow
               </button>
+              <Link href={`/messages?user=${profile.id}`} className="rounded-xl border border-sky-300/40 px-4 py-2 text-sky-300">
+                Message
+              </Link>
             </div>
           </section>
         ) : null}

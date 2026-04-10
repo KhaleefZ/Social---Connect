@@ -6,7 +6,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { getClientToken } from "@/lib/client-auth";
-import { TopNav } from "@/components/top-nav";
+import { AppSidebar } from "@/components/app-sidebar";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { NotificationsBell } from "@/components/notifications-bell";
+import { SocialLogo } from "@/components/social-logo";
 
 type Profile = {
   id: string;
@@ -35,6 +38,12 @@ type OwnPost = {
   created_at: string;
 };
 
+type FollowerPreview = {
+  id: string;
+  username: string;
+  avatar_url: string | null;
+};
+
 export default function MePage() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -49,6 +58,16 @@ export default function MePage() {
   const [loading, setLoading] = useState(true);
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [followerPreviews, setFollowerPreviews] = useState<FollowerPreview[]>([]);
+
+  const loadFollowerPreviews = useCallback(async (profileId: string) => {
+    const response = await fetch(`/api/users/${profileId}/followers?page=1&limit=4`);
+    const data = await response.json();
+
+    if (response.ok) {
+      setFollowerPreviews((data.items ?? []).slice(0, 4) as FollowerPreview[]);
+    }
+  }, []);
 
   const loadProfile = useCallback(async () => {
     const token = getClientToken();
@@ -79,8 +98,9 @@ export default function MePage() {
     setBio((data.user.bio as string | null) ?? "");
     setLocation((data.user.location as string | null) ?? "");
     setWebsite((data.user.website as string | null) ?? "");
+    void loadFollowerPreviews(data.user.id);
     setLoading(false);
-  }, [router]);
+  }, [loadFollowerPreviews, router]);
 
   const loadOwnPosts = useCallback(async () => {
     const token = getClientToken();
@@ -109,13 +129,31 @@ export default function MePage() {
   }, [router]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void loadProfile();
-      void loadOwnPosts();
-    }, 0);
+    let cancelled = false;
+
+    async function refreshAll() {
+      if (cancelled) {
+        return;
+      }
+
+      await Promise.all([loadProfile(), loadOwnPosts()]);
+    }
+
+    void refreshAll();
+
+    const onFocus = () => {
+      void refreshAll();
+    };
+    window.addEventListener("focus", onFocus);
+
+    const interval = window.setInterval(() => {
+      void refreshAll();
+    }, 8000);
 
     return () => {
-      window.clearTimeout(timer);
+      cancelled = true;
+      window.removeEventListener("focus", onFocus);
+      window.clearInterval(interval);
     };
   }, [loadOwnPosts, loadProfile]);
 
@@ -215,154 +253,151 @@ export default function MePage() {
   }
 
   return (
-    <div>
-      <TopNav />
-      <main className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:px-6 sm:py-10 lg:grid-cols-[0.95fr_1.05fr] lg:gap-8">
-        <section className="rounded-2xl border border-white/10 bg-white/5 p-5 sm:p-6 lg:sticky lg:top-24 lg:h-fit">
-          <h1 className="text-2xl font-semibold text-white">My profile</h1>
-          {error ? <p className="mt-3 text-sm text-rose-300">{error}</p> : null}
-          {notice ? <p className="mt-3 text-sm text-emerald-300">{notice}</p> : null}
-          {loading ? <p className="mt-3 text-sm text-slate-300">Loading profile...</p> : null}
+    <div className="min-h-screen bg-[#040b14] text-white">
+      <NotificationsBell />
+      <div className="mx-auto flex max-w-[1400px]">
+        <AppSidebar active="profile" />
 
-          {profile ? (
-            <div className="mt-4 space-y-4">
-              <div className="flex items-center gap-4">
-                {profile.avatar_url ? (
-                  <Image
-                    src={profile.avatar_url}
-                    alt="Avatar"
-                    width={74}
-                    height={74}
-                    className="h-[74px] w-[74px] rounded-full border-2 border-emerald-300/70 object-cover"
-                  />
-                ) : (
-                  <div className="flex h-[74px] w-[74px] items-center justify-center rounded-full border-2 border-emerald-300/70 bg-emerald-300/10 text-xl font-semibold text-emerald-200">
-                    {profile.username.slice(0, 1).toUpperCase()}
-                  </div>
-                )}
-                <div>
-                  <p className="text-lg font-semibold text-white">
-                    {profile.first_name} {profile.last_name}
-                  </p>
-                  <p className="text-sm text-slate-300">@{profile.username}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                <div className="rounded-xl border border-white/10 bg-black/20 px-2 py-2">
-                  <p className="font-semibold text-white">{profile.posts_count}</p>
-                  <p className="text-slate-300">Posts</p>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-black/20 px-2 py-2">
-                  <p className="font-semibold text-white">{profile.followers_count}</p>
-                  <p className="text-slate-300">Followers</p>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-black/20 px-2 py-2">
-                  <p className="font-semibold text-white">{profile.following_count}</p>
-                  <p className="text-slate-300">Following</p>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-white/10 bg-slate-900/60 p-3 text-sm text-slate-200">
-                <p>{profile.bio || "No bio yet."}</p>
-                <p className="mt-2">{profile.location || "No location"}</p>
-                <p className="mt-2 break-all">{profile.website || "No website"}</p>
-              </div>
-            </div>
-          ) : null}
-        </section>
-
-        <section className="space-y-5">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-5 sm:p-6">
-            <h2 className="text-lg font-semibold text-white">Profile actions</h2>
-            <button
-              type="button"
-              onClick={() => setIsEditing((prev) => !prev)}
-              className="mt-3 w-full rounded-xl border border-white/20 px-4 py-2 text-sm text-white transition hover:bg-white/10"
-            >
-              {isEditing ? "Close edit profile" : "Open edit profile"}
-            </button>
+        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-10">
+          <div className="mb-4 flex items-center justify-between lg:hidden">
+            <SocialLogo href={"/feed" as Route} />
+            <Link href={"/feed" as Route} className="rounded-full border border-white/20 px-3 py-1 text-sm text-slate-200">
+              Feed
+            </Link>
           </div>
 
-          {isEditing ? (
-            <>
-              <form onSubmit={saveProfile} className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-5 sm:p-6">
-                <h2 className="text-lg font-semibold text-white">Edit profile</h2>
-                <div className="space-y-2 text-sm text-slate-300">
-                  <label className="block">Email</label>
-                  <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" className="w-full rounded-xl border border-white/15 bg-slate-900/70 px-3 py-2 text-white transition focus:border-emerald-300/50" placeholder="Email" />
-                </div>
-                <div className="space-y-2 text-sm text-slate-300">
-                  <label className="block">Phone number</label>
-                  <input value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} className="w-full rounded-xl border border-white/15 bg-slate-900/70 px-3 py-2 text-white transition focus:border-emerald-300/50" placeholder="Phone number" />
-                </div>
-                <div className="space-y-2 text-sm text-slate-300">
-                  <label className="block">Bio</label>
-                  <textarea value={bio} onChange={(event) => setBio(event.target.value)} maxLength={160} className="h-24 w-full rounded-xl border border-white/15 bg-slate-900/70 px-3 py-2 text-white transition focus:border-emerald-300/50" placeholder="Bio" />
-                </div>
-                <div className="space-y-2 text-sm text-slate-300">
-                  <label className="block">Location</label>
-                  <input value={location} onChange={(event) => setLocation(event.target.value)} className="w-full rounded-xl border border-white/15 bg-slate-900/70 px-3 py-2 text-white transition focus:border-emerald-300/50" placeholder="Location" />
-                </div>
-                <div className="space-y-2 text-sm text-slate-300">
-                  <label className="block">Website</label>
-                  <input value={website} onChange={(event) => setWebsite(event.target.value)} className="w-full rounded-xl border border-white/15 bg-slate-900/70 px-3 py-2 text-white transition focus:border-emerald-300/50" placeholder="Website (https://...)" />
-                </div>
-                <button className="w-full rounded-xl bg-accent px-4 py-2.5 font-medium text-accent-foreground transition hover:-translate-y-0.5">Save</button>
-              </form>
+          {error ? <p className="mb-3 text-sm text-rose-300">{error}</p> : null}
+          {notice ? <p className="mb-3 text-sm text-emerald-300">{notice}</p> : null}
+          {loading ? <p className="mb-3 text-sm text-slate-300">Loading profile...</p> : null}
 
-              <form onSubmit={uploadAvatar} className="rounded-2xl border border-white/10 bg-white/5 p-5 sm:p-6">
-                <h2 className="text-lg font-semibold text-white">Upload avatar</h2>
-                <p className="mt-2 text-xs text-slate-300">JPEG or PNG, max 2 MB.</p>
-                <input name="file" type="file" accept="image/jpeg,image/png" className="mt-3 w-full text-sm text-slate-200" />
-                <button className="mt-3 w-full rounded-xl bg-white px-4 py-2.5 font-medium text-slate-900 transition hover:-translate-y-0.5">Upload</button>
-              </form>
-            </>
-          ) : null}
+          {profile ? (
+            <section className="mx-auto max-w-4xl">
+              <div className="flex flex-col gap-6 border-b border-white/10 pb-8 sm:flex-row">
+                <div className="sm:w-52 sm:shrink-0 sm:pl-8">
+                  {profile.avatar_url ? (
+                    <Image
+                      src={profile.avatar_url}
+                      alt="Avatar"
+                      width={154}
+                      height={154}
+                      className="h-32 w-32 rounded-full border border-white/20 object-cover sm:h-[154px] sm:w-[154px]"
+                    />
+                  ) : (
+                    <div className="flex h-32 w-32 items-center justify-center rounded-full border border-white/20 bg-white/10 text-4xl font-semibold sm:h-[154px] sm:w-[154px]">
+                      {profile.username.slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                </div>
 
-          <section className="rounded-2xl border border-white/10 bg-white/5 p-5 sm:p-6">
-            <h2 className="text-lg font-semibold text-white">Your posts</h2>
-            {loadingPosts ? <p className="mt-3 text-sm text-slate-300">Loading your posts...</p> : null}
-            {!loadingPosts && ownPosts.length === 0 ? (
-              <p className="mt-3 text-sm text-slate-300">No posts yet. Create one from the feed screen.</p>
-            ) : null}
-            <div className="mt-4 space-y-4">
-              {ownPosts.map((post) => (
-                <article key={post.id} className="rounded-xl border border-white/10 bg-black/20 p-4">
-                  <p className="text-sm text-slate-300">@{post.author_username}</p>
-                  <p className="mt-2 whitespace-pre-wrap text-white">{post.content}</p>
-                  {post.media_url ? (
-                    post.media_type === "video" ? (
-                      <video controls className="mt-3 w-full rounded-xl border border-white/10">
-                        <source src={post.media_url} />
-                      </video>
-                    ) : (
-                      <Image
-                        src={post.media_url}
-                        alt="Post media"
-                        width={720}
-                        height={320}
-                        className="mt-3 max-h-72 rounded-xl object-cover"
-                      />
-                    )
-                  ) : null}
-                  <div className="mt-3 flex items-center justify-between gap-3 text-sm text-slate-300">
-                    <span>{post.like_count} likes · {post.comment_count} comments</span>
-                    <div className="flex gap-2">
-                      <Link href={`/posts/${post.id}` as Route} className="rounded-full border border-white/20 px-3 py-1 text-white transition hover:bg-white/10">
-                        Open
-                      </Link>
-                      <button type="button" onClick={() => deleteOwnPost(post.id)} className="rounded-full border border-rose-300/40 px-3 py-1 text-rose-200 transition hover:bg-rose-300/10">
-                        Delete
-                      </button>
+                <div className="flex-1">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h1 className="text-3xl font-semibold">{profile.username}</h1>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing((prev) => !prev)}
+                      className="rounded-lg bg-white/15 px-4 py-2 text-sm font-medium"
+                    >
+                      {isEditing ? "Close edit" : "Edit profile"}
+                    </button>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-5 text-sm sm:text-base">
+                    <p><span className="font-semibold">{profile.posts_count}</span> posts</p>
+                    <p><span className="font-semibold">{profile.followers_count}</span> followers</p>
+                    <p><span className="font-semibold">{profile.following_count}</span> following</p>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-300">
+                    <span className="uppercase tracking-[0.25em]">Followed by</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {followerPreviews.length > 0 ? followerPreviews.map((follower) => (
+                        <span key={follower.id} className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-1">
+                          {follower.avatar_url ? (
+                            <Image src={follower.avatar_url} alt={follower.username} width={18} height={18} className="h-[18px] w-[18px] rounded-full object-cover" />
+                          ) : (
+                            <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-white/10 text-[10px]">{follower.username.slice(0, 1).toUpperCase()}</span>
+                          )}
+                          <span>{follower.username}</span>
+                        </span>
+                      )) : (
+                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1">sample followers</span>
+                      )}
                     </div>
                   </div>
-                </article>
-              ))}
-            </div>
-          </section>
-        </section>
-      </main>
+
+                  <div className="mt-4 space-y-1 text-sm text-slate-200">
+                    <p className="font-semibold text-white">{profile.first_name} {profile.last_name}</p>
+                    <p>{profile.bio || "No bio yet."}</p>
+                    <p>{profile.location || "No location"}</p>
+                    <p className="break-all text-sky-300">{profile.website || "No website"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {isEditing ? (
+                <section className="mt-6 grid gap-5 lg:grid-cols-2">
+                  <form onSubmit={saveProfile} className="space-y-3 rounded-2xl border border-white/10 bg-black/20 p-5">
+                    <h2 className="text-lg font-semibold">Edit profile</h2>
+                    <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" className="w-full rounded-xl border border-white/15 bg-slate-900/70 px-3 py-2 text-white" placeholder="Email" />
+                    <input value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} className="w-full rounded-xl border border-white/15 bg-slate-900/70 px-3 py-2 text-white" placeholder="Phone number" />
+                    <textarea value={bio} onChange={(event) => setBio(event.target.value)} maxLength={160} className="h-24 w-full rounded-xl border border-white/15 bg-slate-900/70 px-3 py-2 text-white" placeholder="Bio" />
+                    <input value={location} onChange={(event) => setLocation(event.target.value)} className="w-full rounded-xl border border-white/15 bg-slate-900/70 px-3 py-2 text-white" placeholder="Location" />
+                    <input value={website} onChange={(event) => setWebsite(event.target.value)} className="w-full rounded-xl border border-white/15 bg-slate-900/70 px-3 py-2 text-white" placeholder="Website" />
+                    <button className="w-full rounded-xl bg-[#26457f] px-4 py-2.5 font-medium">Save changes</button>
+                  </form>
+
+                  <form onSubmit={uploadAvatar} className="rounded-2xl border border-white/10 bg-black/20 p-5">
+                    <h2 className="text-lg font-semibold">Upload avatar</h2>
+                    <p className="mt-2 text-xs text-slate-300">JPEG or PNG, max 2 MB.</p>
+                    <input name="file" type="file" accept="image/jpeg,image/png" className="mt-4 w-full text-sm text-slate-200" />
+                    <button className="mt-4 w-full rounded-xl border border-white/30 px-4 py-2.5 text-sm font-medium">Upload avatar</button>
+                  </form>
+                </section>
+              ) : null}
+
+              <section className="mt-8 border-t border-white/10 pt-5">
+                <h2 className="mb-4 text-center text-sm font-semibold tracking-[0.25em] text-slate-300">POSTS</h2>
+                {loadingPosts ? <p className="text-sm text-slate-300">Loading your posts...</p> : null}
+                {!loadingPosts && ownPosts.length === 0 ? <p className="text-sm text-slate-300">No posts yet.</p> : null}
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {ownPosts.map((post) => (
+                    <article key={post.id} className="group relative overflow-hidden rounded-lg border border-white/10 bg-black/25">
+                      {post.media_url ? (
+                        post.media_type === "video" ? (
+                          <video controls className="h-72 w-full object-cover">
+                            <source src={post.media_url} />
+                          </video>
+                        ) : (
+                          <Image src={post.media_url} alt="Post media" width={420} height={420} className="h-72 w-full object-cover" />
+                        )
+                      ) : (
+                        <div className="flex h-72 items-center justify-center p-4 text-sm text-slate-300">{post.content}</div>
+                      )}
+
+                      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 to-transparent px-3 py-2 text-xs text-slate-200">
+                        <span>{post.like_count} likes</span>
+                        <div className="flex gap-2">
+                          <Link href={`/posts/${post.id}` as Route} className="rounded-md border border-white/25 px-2 py-1">
+                            Open
+                          </Link>
+                          <button type="button" onClick={() => deleteOwnPost(post.id)} className="rounded-md border border-rose-300/50 px-2 py-1 text-rose-200">
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            </section>
+          ) : null}
+        </main>
+      </div>
+
+      <div className="pb-20 lg:hidden">
+        <MobileBottomNav active="profile" />
+      </div>
     </div>
   );
 }

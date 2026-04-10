@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     return jsonError(followingError.message, 500);
   }
 
-  const followingIds = (followingRows ?? []).map((row) => row.following_id);
+  const followingIds = Array.from(new Set([auth.user.userId, ...(followingRows ?? []).map((row) => row.following_id)]));
 
   if (followingIds.length === 0) {
     return jsonSuccess({ items: [], page, limit, total: 0 });

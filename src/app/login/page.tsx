@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { getClientToken, setClientToken } from "@/lib/client-auth";
-import { TopNav } from "@/components/top-nav";
+import { SocialLogo } from "@/components/social-logo";
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState("");
@@ -43,9 +43,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div>
-      <TopNav />
-      <main className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:px-6 sm:py-12 md:grid-cols-[0.9fr_1.1fr] md:items-center">
+    <main className="mx-auto grid min-h-screen max-w-6xl gap-6 px-4 py-8 sm:px-6 sm:py-12 md:grid-cols-[0.9fr_1.1fr] md:items-center">
+      <div className="md:col-span-2">
+        <SocialLogo href="/" />
+      </div>
+
+      <div className="md:col-span-2 grid gap-6 md:grid-cols-[0.9fr_1.1fr] md:items-center">
         <section className="hidden rounded-3xl border border-white/10 bg-gradient-to-br from-emerald-300/15 via-transparent to-cyan-300/10 p-8 md:block">
           <p className="inline-flex rounded-full border border-emerald-300/30 bg-emerald-300/10 px-3 py-1 text-xs font-medium text-emerald-200">
             Welcome back
@@ -59,12 +62,6 @@ export default function LoginPage() {
         <section className="rounded-3xl border border-white/10 bg-white/5 p-5 sm:p-7">
           <h2 className="text-3xl font-semibold text-white">Login</h2>
           <p className="mt-2 text-sm text-slate-300">Use username or email with password.</p>
-          <p className="mt-1 text-sm text-slate-300">
-            New here?{" "}
-            <Link href="/register" className="text-emerald-300 underline underline-offset-4">
-              Create account
-            </Link>
-          </p>
 
           <form onSubmit={onSubmit} className="mt-7 space-y-4">
             <input
@@ -89,9 +86,15 @@ export default function LoginPage() {
             >
               {loading ? "Signing in..." : "Sign in"}
             </button>
+            <p className="pt-1 text-center text-sm text-slate-300">
+              New here?{" "}
+              <Link href="/register" className="text-emerald-300 underline underline-offset-4">
+                Create account
+              </Link>
+            </p>
           </form>
         </section>
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }
